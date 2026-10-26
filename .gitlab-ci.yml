@@ -1,0 +1,12 @@
+stages: [build, test]
+build:
+  image: mcr.microsoft.com/dotnet/sdk:8.0
+  stage: build
+  script:
+    - dotnet restore api/ProductionTracker.csproj
+    - dotnet build api/ProductionTracker.csproj --no-restore --configuration Release
+test:
+  image: mcr.microsoft.com/dotnet/sdk:8.0
+  stage: test
+  script:
+    - dotnet test tests/ProductionTracker.Tests.csproj --configuration Release

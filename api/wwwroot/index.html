@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Smart Meter Production Tracker</title>
+  <style>
+    :root {font-family:Inter,system-ui,Arial,sans-serif;color:#e5eef8;background:#0c1423;color-scheme:dark}
+    *{box-sizing:border-box}body{margin:0}header{background:#152239;padding:26px max(24px,calc((100vw - 1120px)/2));border-bottom:1px solid #2a3b54}
+    .eyebrow{color:#53dfad;text-transform:uppercase;letter-spacing:.14em;font-size:12px;font-weight:700}h1{margin:9px 0;font-size:30px}header p{color:#9fb2cb;margin:0}
+    main{max-width:1120px;margin:32px auto;padding:0 20px}.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:13px;margin-bottom:22px}
+    .stat,.panel{background:#17243a;border:1px solid #293b54;border-radius:14px;padding:20px}.stat strong{display:block;font-size:32px;margin-top:5px}.stat span{color:#b8c7d9;font-size:13px}
+    .layout{display:grid;grid-template-columns:300px 1fr;gap:20px}.panel h2{font-size:18px;margin:0 0 17px}label{display:block;color:#adbed1;font-size:13px;margin:14px 0 6px}
+    input,select{width:100%;background:#0d192a;border:1px solid #344862;border-radius:8px;padding:11px;color:white;font-size:14px}button{background:#53dfad;border:0;border-radius:8px;color:#09231b;font-weight:750;padding:11px 15px;cursor:pointer}
+    button:hover{filter:brightness(1.1)}button:disabled{opacity:.45;cursor:not-allowed}.wide{width:100%;margin-top:20px}.secondary{background:#294466;color:white;padding:8px 10px}
+    table{width:100%;border-collapse:collapse}th{text-align:left;color:#9fb2cb;font-size:12px;text-transform:uppercase}td,th{padding:13px 9px;border-bottom:1px solid #304056}td{font-size:13px}
+    .pill{padding:5px 8px;border-radius:100px;font-size:11px;font-weight:750}.Passed{background:#153e33;color:#66ebbb}.Failed{background:#522a39;color:#ff9ca7}.Registered{background:#39465c;color:#d1ddea}
+    .muted{color:#98abc5}.scroll{overflow:auto}#message{min-height:26px;font-size:13px;margin-top:13px}#history{margin-top:20px}.hidden{display:none}.hint{font-size:12px;color:#9fb2cb;margin-top:12px}
+    @media(max-width:850px){.stats{grid-template-columns:repeat(2,1fr)}.layout{grid-template-columns:1fr}}@media(max-width:520px){h1{font-size:23px}.stat{padding:14px}.stat strong{font-size:26px}}
+  </style>
+</head>
+<body>
+<header><div class="eyebrow">Manufacturing systems / Demo</div><h1>Smart Meter Production Tracker</h1><p>Device registration · automated test simulation · production traceability</p></header>
+<main>
+  <section class="stats"><div class="stat"><span>Total Devices</span><strong id="total">0</strong></div><div class="stat"><span>Passed</span><strong id="passed">0</strong></div><div class="stat"><span>Failed</span><strong id="failed">0</strong></div><div class="stat"><span>Waiting</span><strong id="registered">0</strong></div><div class="stat"><span>Tests Run</span><strong id="tests">0</strong></div></section>
+  <div class="layout">
+    <section class="panel"><h2>Register device</h2><form id="register"><label for="serial">Serial number</label><input id="serial" placeholder="SGH-0001" maxlength="80" required><label for="firmware">Firmware version</label><input id="firmware" value="2.00" maxlength="40" required><button class="wide">Register device</button></form><div id="message" role="status"></div><p class="hint">Demo-only simulated test limits. Not real hardware specifications.</p></section>
+    <section class="panel"><h2>Device inventory</h2><label for="filter">Filter status</label><select id="filter"><option value="">All devices</option><option>Registered</option><option>Passed</option><option>Failed</option></select><div class="scroll"><table><thead><tr><th>Serial number</th><th>Firmware</th><th>Status</th><th>Tests</th><th>Actions</th></tr></thead><tbody id="devices"></tbody></table></div></section>
+  </div>
+  <section id="history" class="panel hidden"><h2 id="history-title">Test history</h2><div class="scroll"><table><thead><tr><th>Time (local)</th><th>Station</th><th>Voltage (V)</th><th>Signal score</th><th>Result</th></tr></thead><tbody id="history-rows"></tbody></table></div></section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const message=(s,error=false)=>{$('message').textContent=s;$('message').style.color=error?'#ff9ca7':'#66ebbb'};
+async function request(url,options){const r=await fetch(url,options);let body=await r.json().catch(()=>({}));if(!r.ok)throw Error(body.error||`Request failed (${r.status})`);return body}
+function cell(value){const td=document.createElement('td');td.textContent=String(value);return td}
+function pill(status){const span=document.createElement('span');span.className='pill '+status;span.textContent=status;return span}
+async function refresh(){try{const [s,items]=await Promise.all([request('/api/summary'),request('/api/devices?status='+encodeURIComponent($('filter').value))]);for(const key of ['total','passed','failed','registered','tests'])$(key).textContent=s[key];const tbody=$('devices');tbody.replaceChildren();for(const item of items){const tr=document.createElement('tr');tr.append(cell(item.serialNumber),cell(item.firmwareVersion));const status=cell('');status.append(pill(item.status));tr.append(status,cell(item.testCount));const action=cell('');const run=document.createElement('button');run.textContent='Run test';run.className='secondary';run.onclick=()=>runTest(item.id);const history=document.createElement('button');history.textContent='History';history.className='secondary';history.style.marginLeft='6px';history.onclick=()=>showHistory(item.id);action.append(run,history);tr.append(action);tbody.append(tr)}if(!items.length){const tr=document.createElement('tr');const td=cell('No devices found. Register one to begin.');td.colSpan=5;tr.append(td);tbody.append(tr)}}catch(e){message(e.message,true)}}
+async function runTest(id){try{const result=await request(`/api/devices/${id}/tests`,{method:'POST'});message(`Test ${result.passed?'PASSED':'FAILED'} · ${result.voltage} V · signal ${result.signalQuality}`);await refresh();await showHistory(id)}catch(e){message(e.message,true)}}
+async function showHistory(id){try{const d=await request(`/api/devices/${id}`);$('history-title').textContent=`Test history · ${d.serialNumber}`;$('history').classList.remove('hidden');const tbody=$('history-rows');tbody.replaceChildren();for(const t of d.tests){const tr=document.createElement('tr');tr.append(cell(new Date(t.testedAt).toLocaleString()),cell(t.station),cell(t.voltage),cell(t.signalQuality));const s=cell('');s.append(pill(t.passed?'Passed':'Failed'));tr.append(s);tbody.append(tr)}if(!d.tests.length){const tr=document.createElement('tr');const td=cell('No tests yet');td.colSpan=5;tr.append(td);tbody.append(tr)}}catch(e){message(e.message,true)}}
+$('register').addEventListener('submit',async e=>{e.preventDefault();try{const d=await request('/api/devices',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({serialNumber:$('serial').value,firmwareVersion:$('firmware').value})});message(`Registered ${d.serialNumber}`);$('serial').value='';await refresh()}catch(err){message(err.message,true)}});
+$('filter').addEventListener('change',refresh);refresh();
+</script></body></html>

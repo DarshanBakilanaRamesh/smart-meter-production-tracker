@@ -1,0 +1,27 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: manufacturing
+      POSTGRES_USER: tracker
+      POSTGRES_PASSWORD: local_demo_only
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tracker -d manufacturing"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  api:
+    build: ./api
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__ManufacturingDb: Host=db;Database=manufacturing;Username=tracker;Password=local_demo_only
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+volumes:
+  postgres_data:
