@@ -6,9 +6,7 @@ using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ====================================
 // DATABASE CONFIGURATION
-// ====================================
 
 builder.Services.AddDbContext<ManufacturingDb>(options =>
     options.UseNpgsql(
@@ -17,18 +15,18 @@ builder.Services.AddDbContext<ManufacturingDb>(options =>
     )
 );
 
-// ====================================
+
 // SWAGGER
-// ====================================
+
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// ====================================
+
 // MIDDLEWARE
-// ====================================
+
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
@@ -42,13 +40,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// ====================================
-// DATABASE INITIALIZATION
-// ====================================
 
-// Demo initialization.
-// Existing Phase 2 tables have already
-// been added to PostgreSQL manually.
+// DATABASE INITIALIZATION
 
 using (var scope = app.Services.CreateScope())
 {
@@ -58,9 +51,9 @@ using (var scope = app.Services.CreateScope())
     await db.Database.EnsureCreatedAsync();
 }
 
-// ====================================
+
 // HEALTH CHECK
-// ====================================
+
 
 app.MapGet("/health", async (ManufacturingDb db) =>
 {
@@ -71,9 +64,9 @@ app.MapGet("/health", async (ManufacturingDb db) =>
         : Results.StatusCode(503);
 });
 
-// ====================================
+
 // OVERALL PRODUCTION SUMMARY
-// ====================================
+
 
 app.MapGet("/api/summary", async (ManufacturingDb db) =>
 {
@@ -97,9 +90,9 @@ app.MapGet("/api/summary", async (ManufacturingDb db) =>
     });
 });
 
-// ====================================
+
 // GET ALL DEVICES
-// ====================================
+
 
 app.MapGet("/api/devices", async (
     ManufacturingDb db,
@@ -131,9 +124,9 @@ app.MapGet("/api/devices", async (
     return Results.Ok(devices);
 });
 
-// ====================================
+
 // GET DEVICE BY ID
-// ====================================
+
 
 app.MapGet("/api/devices/{id:int}", async (
     int id,
@@ -170,9 +163,9 @@ app.MapGet("/api/devices/{id:int}", async (
     });
 });
 
-// ====================================
+
 // REGISTER DEVICE
-// ====================================
+
 
 app.MapPost("/api/devices", async (
     RegisterDeviceRequest request,
@@ -239,9 +232,9 @@ app.MapPost("/api/devices", async (
     );
 });
 
-// ====================================
+
 // RUN SIMULATED DEVICE TEST
-// ====================================
+
 
 app.MapPost("/api/devices/{id:int}/tests", async (
     int id,
@@ -289,9 +282,8 @@ app.MapPost("/api/devices/{id:int}/tests", async (
     });
 });
 
-// ====================================
 // GET ALL PRODUCTION ORDERS
-// ====================================
+
 
 app.MapGet("/api/orders", async (ManufacturingDb db) =>
 {
@@ -313,9 +305,9 @@ app.MapGet("/api/orders", async (ManufacturingDb db) =>
     return Results.Ok(orders);
 });
 
-// ====================================
+
 // GET PRODUCTION ORDER BY ID
-// ====================================
+
 
 app.MapGet("/api/orders/{id:int}", async (
     int id,
@@ -348,9 +340,9 @@ app.MapGet("/api/orders/{id:int}", async (
         : Results.Ok(order);
 });
 
-// ====================================
+
 // CREATE PRODUCTION ORDER
-// ====================================
+
 
 app.MapPost("/api/orders", async (
     CreateProductionOrderRequest request,
@@ -421,9 +413,9 @@ app.MapPost("/api/orders", async (
     );
 });
 
-// ====================================
+
 // ASSIGN DEVICE TO PRODUCTION ORDER
-// ====================================
+
 
 app.MapPost("/api/orders/{id:int}/devices", async (
     int id,
@@ -523,9 +515,8 @@ app.MapPost("/api/orders/{id:int}/devices", async (
     );
 });
 
-// ====================================
 // PRODUCTION PROGRESS ANALYTICS
-// ====================================
+
 
 app.MapGet("/api/orders/{id:int}/progress", async (
     int id,
@@ -598,15 +589,14 @@ app.MapGet("/api/orders/{id:int}/progress", async (
     });
 });
 
-// ====================================
+
 // PROMETHEUS METRICS ENDPOINT
-// ====================================
+
 
 app.MapMetrics();
 
-// ====================================
 // START APPLICATION
-// ====================================
+
 
 app.Run();
 
