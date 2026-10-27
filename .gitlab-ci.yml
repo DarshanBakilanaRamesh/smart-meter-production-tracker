@@ -6,13 +6,20 @@ stages:
 build_application:
   stage: build
   image: mcr.microsoft.com/dotnet/sdk:8.0
+
   script:
     - dotnet restore api/ProductionTracker.csproj
-    - dotnet build api/ProductionTracker.csproj --configuration Release --no-restore
+    - dotnet publish api/ProductionTracker.csproj --configuration Release --no-restore --output api/published
+
+  artifacts:
+    paths:
+      - api/published/
+    expire_in: 1 day
 
 unit_tests:
   stage: test
   image: mcr.microsoft.com/dotnet/sdk:8.0
+
   script:
     - dotnet restore tests/ProductionTracker.Tests.csproj
     - dotnet test tests/ProductionTracker.Tests.csproj --configuration Release --no-restore
@@ -31,10 +38,13 @@ publish_docker_image:
     DOCKER_TLS_VERIFY: "1"
     DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
 
+  dependencies:
+    - build_application
+
   script:
     - docker info
     - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
-    - docker build -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA" ./api
+    - docker build -f api/Dockerfile.ci -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA" ./api
     - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
 
   rules:
