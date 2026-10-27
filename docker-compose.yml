@@ -1,9 +1,9 @@
 
 services:
 
-  # ==================================
+ 
   # POSTGRESQL DATABASE
-  # ==================================
+
 
   db:
     image: postgres:16-alpine
@@ -27,9 +27,9 @@ services:
 
     restart: unless-stopped
 
-  # ==================================
+
   # ASP.NET CORE APPLICATION
-  # ==================================
+
 
   api:
     build: ./api
@@ -49,9 +49,9 @@ services:
 
     restart: unless-stopped
 
-  # ==================================
+
   # PROMETHEUS
-  # ==================================
+
 
   prometheus:
     image: prom/prometheus:latest
@@ -72,9 +72,9 @@ services:
 
     restart: unless-stopped
 
-  # ==================================
+
   # GRAFANA
-  # ==================================
+
 
   grafana:
     image: grafana/grafana:latest
@@ -96,9 +96,9 @@ services:
 
     restart: unless-stopped
 
-# ====================================
+
 # PERSISTENT STORAGE
-# ====================================
+
 
 volumes:
   postgres_data:
