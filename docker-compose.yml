@@ -1,27 +1,106 @@
+
 services:
+
+  # ==================================
+  # POSTGRESQL DATABASE
+  # ==================================
+
   db:
     image: postgres:16-alpine
+
     environment:
       POSTGRES_DB: manufacturing
       POSTGRES_USER: tracker
       POSTGRES_PASSWORD: local_demo_only
+
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U tracker -d manufacturing"]
+      test:
+        - CMD-SHELL
+        - pg_isready -U tracker -d manufacturing
+
       interval: 5s
       timeout: 3s
       retries: 20
+
+    restart: unless-stopped
+
+  # ==================================
+  # ASP.NET CORE APPLICATION
+  # ==================================
+
   api:
     build: ./api
+
     environment:
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_ENVIRONMENT: Development
+
       ConnectionStrings__ManufacturingDb: Host=db;Database=manufacturing;Username=tracker;Password=local_demo_only
+
     depends_on:
       db:
         condition: service_healthy
+
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
+
+    restart: unless-stopped
+
+  # ==================================
+  # PROMETHEUS
+  # ==================================
+
+  prometheus:
+    image: prom/prometheus:latest
+
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+
+    ports:
+      - "127.0.0.1:9090:9090"
+
+    depends_on:
+      - api
+
+    restart: unless-stopped
+
+  # ==================================
+  # GRAFANA
+  # ==================================
+
+  grafana:
+    image: grafana/grafana:latest
+
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: local_demo_only_change_me
+      GF_USERS_ALLOW_SIGN_UP: "false"
+
+    ports:
+      - "127.0.0.1:3000:3000"
+
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+
+    depends_on:
+      - prometheus
+
+    restart: unless-stopped
+
+# ====================================
+# PERSISTENT STORAGE
+# ====================================
+
 volumes:
   postgres_data:
+  prometheus_data:
+  grafana_data:
